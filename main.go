@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	term "github.com/nsf/termbox-go"
@@ -29,31 +27,6 @@ func nextUnknownWord(words []*Word) chan *Word {
 	return wordChan
 }
 
-func dumpPeriodically(words []*Word, done chan bool) {
-	go func() {
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
-
-		var gracefulStop = make(chan os.Signal)
-		signal.Notify(gracefulStop, syscall.SIGTERM)
-		signal.Notify(gracefulStop, syscall.SIGINT)
-
-		for {
-			select {
-			case <-done:
-				return
-			case t := <-ticker.C:
-				_ = t
-				// TODO: dump words if has change
-			case <-gracefulStop:
-				// fmt.Println("Catch CTRL-C")
-				Dump(filename, words)
-				os.Exit(0)
-			}
-		}
-	}()
-}
-
 var filename string
 
 func init() {
@@ -65,11 +38,16 @@ func init() {
 }
 
 const usage = `
-	space: next word
-	k: i know it
-	i: invalid word
+
+
+	------ shortcuts ----------
+
+	space: next word (or skip)
+	k: mark it known (space)
+	d: delete it (space)
 	t: translate it
-	CTRL-C: quit
+	s: statistics
+	CTRL-C: quit (save)
 `
 
 func reset() {
@@ -88,15 +66,11 @@ func main() {
 	}
 	defer term.Close()
 
-	done := make(chan bool)
-	dumpPeriodically(words, done)
-
 	wordChan := nextUnknownWord(words)
 
-	// TODO: in a endless loop
 	for word := range wordChan {
 		reset()
-		fmt.Println(word.Token)
+		fmt.Printf("word:      %s (%d)\n", word.Token, word.Freq)
 		fmt.Println(usage)
 
 	keyPressListenerLoop:
@@ -105,20 +79,34 @@ func main() {
 			case term.EventKey:
 				switch ev.Key {
 				case term.KeyCtrlC:
-					// TODO: handle
+					Dump(filename, words)
+					total, known := stat(words)
+					fmt.Printf("%d (known) / %d (total)\n", known, total)
 					os.Exit(0)
 				case term.KeySpace:
 					break keyPressListenerLoop
 				default:
-					// we only want to read a single character or one key pressed event
-					// fmt.Println("ASCII : ", ev.Ch)
 					switch ev.Ch {
 					case 'k':
-						fmt.Println("mark it known")
+						word.IsKnown = true
+						break keyPressListenerLoop
 					case 'd':
-						fmt.Println("delete it")
+						word.Invalid = true
+						break keyPressListenerLoop
 					case 't':
-						fmt.Println("translate it")
+						if word.YDTranslate == "" {
+						// TODO: youdaoapi
+						}
+						reset()
+						fmt.Printf("word:      %s (%d)\n", word.Token, word.Freq)
+						fmt.Printf("translate: %s \n", word.YDTranslate)
+						fmt.Println(usage)
+				
+					case 's':
+						total, known := stat(words)
+						reset()
+						fmt.Printf("%d (known) / %d (total)\n", known, total)
+						fmt.Println(usage)
 					}
 				}
 			case term.EventError:
@@ -126,6 +114,16 @@ func main() {
 			}
 		}
 	}
+}
 
-	done <- true
+func stat(words []*Word) (total, known int) {
+	for _, word :=range words {
+		if word.IsKnown {
+			known++
+		}
+	}
+	
+	total = len(words)
+	
+	return
 }
