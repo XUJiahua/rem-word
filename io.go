@@ -24,6 +24,9 @@ func Dump(filename string, words []*Word) error {
 
 	w := csv.NewWriter(file)
 	for _, word := range words {
+		if word.Invalid {
+			continue
+		}
 		if err := w.Write([]string{
 			word.Token,
 			fmt.Sprintf("%d", word.Freq),
