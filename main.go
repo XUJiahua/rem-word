@@ -95,13 +95,17 @@ func main() {
 						break keyPressListenerLoop
 					case 't':
 						if word.YDTranslate == "" {
-						// TODO: youdaoapi
+							trans, err := translate(word.Token)
+							if err != nil {
+								trans = err.Error()
+							}
+							word.YDTranslate = trans
 						}
 						reset()
-						fmt.Printf("word:      %s (%d)\n", word.Token, word.Freq)
+						fmt.Printf("word:      %s (%d)\n\n", word.Token, word.Freq)
 						fmt.Printf("translate: %s \n", word.YDTranslate)
 						fmt.Println(usage)
-				
+
 					case 's':
 						total, known := stat(words)
 						reset()
@@ -117,13 +121,13 @@ func main() {
 }
 
 func stat(words []*Word) (total, known int) {
-	for _, word :=range words {
+	for _, word := range words {
 		if word.IsKnown {
 			known++
 		}
 	}
-	
+
 	total = len(words)
-	
+
 	return
 }

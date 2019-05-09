@@ -31,7 +31,8 @@ func Dump(filename string, words []*Word) error {
 			word.Token,
 			fmt.Sprintf("%d", word.Freq),
 			fmt.Sprintf("%v", word.IsKnown),
-			word.YDTranslate,
+			// word.YDTranslate,
+			"", // NOTE: don't dump translate currently
 		}); err != nil {
 			return err
 		}
