@@ -4,9 +4,17 @@
 
 `word_freq.csv`摘选了经济学人中出现10次以上的单词，总计35275个。
 
-### TODO
+### run
 
-youdaoapi
+```
+go get ./...
+cp conf.toml.example conf.toml
+// add your youdao id/secret
+go build
+./rem-word -csv_file=word_freq_sample.csv
+```
+
+
 
 ### deps
 
